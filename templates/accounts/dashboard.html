@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - JobFinder2340{% endblock %}
+
+{% block content %}
+<h1>Welcome to JobFinder2340</h1>
+<p class="lead">Hello {{ user.username }}, you are logged in as a {{ user.user_type|title }}.</p>
+
+{% if user.user_type == 'job_seeker' %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Your Profile</h5>
+                    <p class="card-text">Create and manage your professional profile.</p>
+                    <a href="{% url 'create_profile' %}" class="btn btn-primary">Create/Edit Profile</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Search Jobs</h5>
+                    <p class="card-text">Find job opportunities that match your skills.</p>
+                    <a href="{% url 'job_search' %}" class="btn btn-success">Search Jobs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% elif user.user_type == 'recruiter' %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Post a Job</h5>
+                    <p class="card-text">Create new job postings to find talent.</p>
+                    <a href="#" class="btn btn-primary">Post Job</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Manage Jobs</h5>
+                    <p class="card-text">View and edit your job postings.</p>
+                    <a href="#" class="btn btn-success">My Jobs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% elif user.user_type == 'admin' %}
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Admin Panel</h5>
+                    <p class="card-text">Manage users, jobs, and site content.</p>
+                    <a href="/admin/" class="btn btn-danger">Admin Panel</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Export Data</h5>
+                    <p class="card-text">Download user and job data for analysis.</p>
+                    <a href="#" class="btn btn-warning">Export Users</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">All Jobs</h5>
+                    <p class="card-text">View all job postings on the platform.</p>
+                    <a href="#" class="btn btn-info">View All Jobs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

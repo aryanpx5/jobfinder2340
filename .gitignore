@@ -1,0 +1,43 @@
+# Python compiled files
+*.pyc
+*.pyo
+__pycache__/
+
+# Virtual environment
+venv/
+ENV/
+env/
+
+# Django stuff:
+*.log
+*.pot
+*.pyc
+*.sqlite3
+db.sqlite3
+
+# Media files (uploads)
+media/
+uploads/
+
+# Static files that are collected
+staticfiles/
+
+# VS Code settings
+.vscode/
+
+# macOS files
+.DS_Store
+
+# PyCharm
+.idea/
+
+# Coverage reports
+.coverage
+htmlcov/
+
+# Environments
+.env
+
+# Misc
+*.bak
+*.swp

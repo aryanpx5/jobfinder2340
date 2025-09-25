@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Jobs - JobFinder2340{% endblock %}
+
+{% block content %}
+<h2>Search Jobs</h2>
+
+<!-- Search Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get">
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Job Title</label>
+                    <input type="text" name="title" class="form-control" value="{{ search_params.title }}" placeholder="e.g., Developer">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Location</label>
+                    <input type="text" name="location" class="form-control" value="{{ search_params.location }}" placeholder="e.g., Atlanta">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Skills</label>
+                    <input type="text" name="skills" class="form-control" value="{{ search_params.skills }}" placeholder="e.g., Python">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Min Salary</label>
+                    <input type="number" name="salary_min" class="form-control" value="{{ search_params.salary_min }}" placeholder="50000">
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input type="checkbox" name="is_remote" value="true" class="form-check-input" {% if search_params.is_remote == 'true' %}checked{% endif %}>
+                        <label class="form-check-label">Remote Work</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input type="checkbox" name="visa_sponsorship" value="true" class="form-check-input" {% if search_params.visa_sponsorship == 'true' %}checked{% endif %}>
+                        <label class="form-check-label">Visa Sponsorship</label>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">Search Jobs</button>
+            <a href="{% url 'job_search' %}" class="btn btn-secondary mt-3">Clear Filters</a>
+        </form>
+    </div>
+</div>
+
+<!-- Search Results -->
+<h4>Found {{ jobs|length }} job{{ jobs|length|pluralize }}</h4>
+
+{% for job in jobs %}
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">{{ job.title }}</h5>
+        <h6 class="card-subtitle mb-2 text-muted">{{ job.recruiter.username }} • {{ job.location }}</h6>
+        
+        <p class="card-text">{{ job.description|truncatewords:30 }}</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <small><strong>Required Skills:</strong> {{ job.required_skills }}</small>
+            </div>
+            <div class="col-md-6">
+                {% if job.salary_min and job.salary_max %}
+                    <small><strong>Salary:</strong> ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}</small>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="mt-2">
+            {% if job.is_remote %}
+                <span class="badge bg-success">Remote</span>
+            {% endif %}
+            {% if job.visa_sponsorship %}
+                <span class="badge bg-info">Visa Sponsorship</span>
+            {% endif %}
+        </div>
+        
+        <small class="text-muted">Posted {{ job.created_at|timesince }} ago</small>
+    </div>
+</div>
+{% empty %}
+<div class="alert alert-info">
+    No jobs found matching your criteria. Try adjusting your search filters.
+</div>
+{% endfor %}
+
+{% endblock %}
