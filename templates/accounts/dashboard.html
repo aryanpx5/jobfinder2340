@@ -35,7 +35,7 @@
                 <div class="card-body">
                     <h5 class="card-title">Post a Job</h5>
                     <p class="card-text">Create new job postings to find talent.</p>
-                    <a href="#" class="btn btn-primary">Post Job</a>
+                    <a href="{% url 'create_posting' %}" class="btn btn-primary">Post Job</a>
                 </div>
             </div>
         </div>
@@ -44,7 +44,7 @@
                 <div class="card-body">
                     <h5 class="card-title">Manage Jobs</h5>
                     <p class="card-text">View and edit your job postings.</p>
-                    <a href="#" class="btn btn-success">My Jobs</a>
+                    <a href="{% url 'my_postings' %}" class="btn btn-success">My Jobs</a>
                 </div>
             </div>
         </div>

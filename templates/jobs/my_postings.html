@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>My Job Postings</h2>
+<a class="btn btn-primary" href="{% url 'create_posting' %}">Create New Posting</a>
+<hr />
+{% if postings %}
+    <ul class="list-group">
+    {% for p in postings %}
+        <li class="list-group-item">
+            <h5>{{ p.title }} {% if p.status != 'active' %}<small>({{ p.get_status_display }})</small>{% endif %}</h5>
+            <p>{{ p.location }} • {{ p.required_skills }}</p>
+            <a href="{% url 'edit_posting' p.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No postings yet. Create one to get started.</p>
+{% endif %}
+{% endblock %}

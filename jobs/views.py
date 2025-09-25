@@ -3,6 +3,18 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import JobSeekerProfile, JobPosting
 from .forms import JobSeekerProfileForm
+from .forms import JobPostingForm
+from django.http import HttpResponseForbidden
+
+
+def recruiter_required(view_func):
+    """Decorator to allow only users with user_type 'recruiter'"""
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated or getattr(request.user, 'user_type', None) != 'recruiter':
+            messages.error(request, 'Only recruiters can access that page.')
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return _wrapped
 
 # -------------------------
 # DASHBOARD VIEW
@@ -102,3 +114,53 @@ def job_search_view(request):
         'search_params': request.GET,
     }
     return render(request, 'jobs/job_search.html', context)
+
+
+# -------------------------
+# RECRUITER: LIST OWN POSTINGS
+# -------------------------
+@login_required
+@recruiter_required
+def my_postings_view(request):
+    postings = JobPosting.objects.filter(recruiter=request.user)
+    return render(request, 'jobs/my_postings.html', {'postings': postings})
+
+
+# -------------------------
+# RECRUITER: CREATE POSTING
+# -------------------------
+@login_required
+@recruiter_required
+def create_posting_view(request):
+    if request.method == 'POST':
+        form = JobPostingForm(request.POST)
+        if form.is_valid():
+            posting = form.save(commit=False)
+            posting.recruiter = request.user
+            posting.save()
+            messages.success(request, 'Job posting created successfully.')
+            return redirect('my_postings')
+    else:
+        form = JobPostingForm()
+    return render(request, 'jobs/create_posting.html', {'form': form})
+
+
+# -------------------------
+# RECRUITER: EDIT POSTING
+# -------------------------
+@login_required
+@recruiter_required
+def edit_posting_view(request, pk):
+    posting = get_object_or_404(JobPosting, pk=pk)
+    if posting.recruiter != request.user:
+        return HttpResponseForbidden('You do not have permission to edit this posting.')
+
+    if request.method == 'POST':
+        form = JobPostingForm(request.POST, instance=posting)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Job posting updated successfully.')
+            return redirect('my_postings')
+    else:
+        form = JobPostingForm(instance=posting)
+    return render(request, 'jobs/edit_posting.html', {'form': form, 'posting': posting})
