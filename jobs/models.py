@@ -12,9 +12,14 @@ class JobSeekerProfile(models.Model):
     links = models.TextField(blank=True, help_text="LinkedIn, GitHub, Portfolio URLs")
     
     # Privacy Settings (Story #5)
-    profile_visible = models.BooleanField(default=True)
-    show_email = models.BooleanField(default=True)
-    show_phone = models.BooleanField(default=False)
+    profile_visible = models.BooleanField(default=True, help_text="Make your profile visible to recruiters")
+    show_email = models.BooleanField(default=True, help_text="Show your email address to recruiters")
+    show_phone = models.BooleanField(default=False, help_text="Show your phone number to recruiters")
+    show_skills = models.BooleanField(default=True, help_text="Show your skills to recruiters")
+    show_education = models.BooleanField(default=True, help_text="Show your education details to recruiters")
+    show_work_experience = models.BooleanField(default=True, help_text="Show your work experience to recruiters")
+    show_links = models.BooleanField(default=True, help_text="Show your portfolio/social links to recruiters")
+    allow_contact = models.BooleanField(default=True, help_text="Allow recruiters to contact you directly")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

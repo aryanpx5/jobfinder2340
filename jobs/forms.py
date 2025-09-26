@@ -34,3 +34,22 @@ class JobPostingForm(forms.ModelForm):
             'visa_sponsorship': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
         }
+
+
+class PrivacySettingsForm(forms.ModelForm):
+    class Meta:
+        model = JobSeekerProfile
+        fields = [
+            'profile_visible', 'show_email', 'show_phone', 'show_skills', 
+            'show_education', 'show_work_experience', 'show_links', 'allow_contact'
+        ]
+        widgets = {
+            'profile_visible': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'show_email': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'show_phone': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'show_skills': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'show_education': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'show_work_experience': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'show_links': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'allow_contact': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }

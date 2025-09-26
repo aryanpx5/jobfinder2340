@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}Privacy Settings{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="fas fa-shield-alt"></i> Privacy Settings
+                    </h3>
+                    <p class="text-muted mb-0">Control what recruiters can see about your profile</p>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">Profile Visibility</h5>
+                                
+                                <div class="form-check mb-3">
+                                    {{ form.profile_visible }}
+                                    <label class="form-check-label" for="{{ form.profile_visible.id_for_label }}">
+                                        <strong>Make Profile Visible</strong>
+                                        <br><small class="text-muted">{{ form.profile_visible.help_text }}</small>
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    {{ form.allow_contact }}
+                                    <label class="form-check-label" for="{{ form.allow_contact.id_for_label }}">
+                                        <strong>Allow Direct Contact</strong>
+                                        <br><small class="text-muted">{{ form.allow_contact.help_text }}</small>
+                                    </label>
+                                </div>
+
+                                <h5 class="text-primary mb-3 mt-4">Contact Information</h5>
+                                
+                                <div class="form-check mb-3">
+                                    {{ form.show_email }}
+                                    <label class="form-check-label" for="{{ form.show_email.id_for_label }}">
+                                        <strong>Show Email Address</strong>
+                                        <br><small class="text-muted">{{ form.show_email.help_text }}</small>
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    {{ form.show_phone }}
+                                    <label class="form-check-label" for="{{ form.show_phone.id_for_label }}">
+                                        <strong>Show Phone Number</strong>
+                                        <br><small class="text-muted">{{ form.show_phone.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">Profile Information</h5>
+                                
+                                <div class="form-check mb-3">
+                                    {{ form.show_skills }}
+                                    <label class="form-check-label" for="{{ form.show_skills.id_for_label }}">
+                                        <strong>Show Skills</strong>
+                                        <br><small class="text-muted">{{ form.show_skills.help_text }}</small>
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    {{ form.show_education }}
+                                    <label class="form-check-label" for="{{ form.show_education.id_for_label }}">
+                                        <strong>Show Education</strong>
+                                        <br><small class="text-muted">{{ form.show_education.help_text }}</small>
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    {{ form.show_work_experience }}
+                                    <label class="form-check-label" for="{{ form.show_work_experience.id_for_label }}">
+                                        <strong>Show Work Experience</strong>
+                                        <br><small class="text-muted">{{ form.show_work_experience.help_text }}</small>
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    {{ form.show_links }}
+                                    <label class="form-check-label" for="{{ form.show_links.id_for_label }}">
+                                        <strong>Show Portfolio/Social Links</strong>
+                                        <br><small class="text-muted">{{ form.show_links.help_text }}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mt-4">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Privacy Note:</strong> Even when sections are hidden, recruiters can still see your headline and basic profile information. Unchecking "Make Profile Visible" will hide your entire profile from recruiter searches.
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'view_profile' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Profile
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Privacy Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

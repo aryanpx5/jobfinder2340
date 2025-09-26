@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import JobSeekerProfile, JobPosting
-from .forms import JobSeekerProfileForm
+from .forms import JobSeekerProfileForm, PrivacySettingsForm
 from .forms import JobPostingForm
 from django.http import HttpResponseForbidden
 
@@ -164,3 +164,30 @@ def edit_posting_view(request, pk):
     else:
         form = JobPostingForm(instance=posting)
     return render(request, 'jobs/edit_posting.html', {'form': form, 'posting': posting})
+
+
+# -------------------------
+# PRIVACY SETTINGS VIEW
+# -------------------------
+@login_required
+def privacy_settings_view(request):
+    if request.user.user_type != 'job_seeker':
+        messages.error(request, 'Only job seekers can access privacy settings.')
+        return redirect('dashboard')
+    
+    try:
+        profile = JobSeekerProfile.objects.get(user=request.user)
+    except JobSeekerProfile.DoesNotExist:
+        messages.info(request, 'Please create your profile first before setting privacy options.')
+        return redirect('create_profile')
+    
+    if request.method == 'POST':
+        form = PrivacySettingsForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Privacy settings updated successfully!')
+            return redirect('privacy_settings')
+    else:
+        form = PrivacySettingsForm(instance=profile)
+    
+    return render(request, 'jobs/privacy_settings.html', {'form': form, 'profile': profile})

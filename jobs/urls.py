@@ -12,6 +12,9 @@ urlpatterns = [
     path('postings/create/', views.create_posting_view, name='create_posting'),
     path('postings/<int:pk>/edit/', views.edit_posting_view, name='edit_posting'),
 
+    # Privacy settings for job seekers
+    path('privacy_settings/', views.privacy_settings_view, name='privacy_settings'),
+
     # Optionally, make dashboard the root
     path('', views.dashboard_view, name='home'),  
 ]
