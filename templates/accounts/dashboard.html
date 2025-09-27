@@ -65,31 +65,51 @@
     </div>
 
 {% elif user.user_type == 'admin' %}
+    <div class="alert alert-info">
+        <i class="fas fa-shield-alt"></i> <strong>Administrator Access:</strong> You have full administrative privileges to moderate content and export data.
+    </div>
+    
     <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">Admin Panel</h5>
-                    <p class="card-text">Manage users, jobs, and site content.</p>
-                    <a href="/admin/" class="btn btn-danger">Admin Panel</a>
+                    <h5 class="card-title"><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h5>
+                    <p class="card-text">View platform statistics and manage content moderation.</p>
+                    <a href="{% url 'admin_dashboard' %}" class="btn btn-primary">Admin Dashboard</a>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">Export Data</h5>
-                    <p class="card-text">Download user and job data for analysis.</p>
-                    <a href="#" class="btn btn-warning">Export Users</a>
+                    <h5 class="card-title"><i class="fas fa-gavel"></i> Job Moderation</h5>
+                    <p class="card-text">Review, approve, or reject job postings to prevent spam and abuse.</p>
+                    <a href="{% url 'moderation_queue' %}" class="btn btn-warning">Moderate Jobs</a>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">All Jobs</h5>
-                    <p class="card-text">View all job postings on the platform.</p>
-                    <a href="#" class="btn btn-info">View All Jobs</a>
+                    <h5 class="card-title"><i class="fas fa-download"></i> Data Export</h5>
+                    <p class="card-text">Export job postings, user data, and analytics for reporting purposes.</p>
+                    <div class="btn-group">
+                        <a href="{% url 'export_data' %}?type=jobs" class="btn btn-success">Export Jobs</a>
+                        <a href="{% url 'export_data' %}?type=users" class="btn btn-info">Export Users</a>
+                        <a href="{% url 'export_data' %}?type=analytics" class="btn btn-secondary">Export Analytics</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-cogs"></i> Django Admin</h5>
+                    <p class="card-text">Access the full Django admin interface for advanced management.</p>
+                    <a href="/admin/" class="btn btn-danger">Django Admin</a>
                 </div>
             </div>
         </div>

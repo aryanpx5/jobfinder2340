@@ -29,9 +29,18 @@ class JobSeekerProfile(models.Model):
 
 class JobPosting(models.Model):
     STATUS_CHOICES = (
+        ('pending', 'Pending Review'),
         ('active', 'Active'),
         ('inactive', 'Inactive'),
         ('removed', 'Removed'),
+        ('rejected', 'Rejected'),
+    )
+    
+    MODERATION_STATUS_CHOICES = (
+        ('pending', 'Pending Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('flagged', 'Flagged for Review'),
     )
     
     recruiter = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -43,7 +52,11 @@ class JobPosting(models.Model):
     salary_max = models.IntegerField(null=True, blank=True)
     is_remote = models.BooleanField(default=False)
     visa_sponsorship = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    moderation_status = models.CharField(max_length=20, choices=MODERATION_STATUS_CHOICES, default='pending')
+    moderation_notes = models.TextField(blank=True, help_text="Admin notes for moderation")
+    moderated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='moderated_posts')
+    moderated_at = models.DateTimeField(null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

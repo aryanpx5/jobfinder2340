@@ -83,7 +83,7 @@ def view_profile_view(request):
 # JOB SEARCH VIEW
 # -------------------------
 def job_search_view(request):
-    jobs = JobPosting.objects.filter(status='active')
+    jobs = JobPosting.objects.filter(status='active', moderation_status='approved')
     
     # Apply filters from GET parameters
     title = request.GET.get('title', '')

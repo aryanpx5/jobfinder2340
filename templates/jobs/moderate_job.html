@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Moderate Job: {{ job.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="fas fa-gavel"></i> Moderate Job Posting
+                </h1>
+                <a href="{% url 'moderation_queue' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Queue
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Job Details -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-briefcase"></i> Job Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Title:</strong><br>
+                            {{ job.title }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Recruiter:</strong><br>
+                            {{ job.recruiter.username }} ({{ job.recruiter.email }})
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Location:</strong><br>
+                            {{ job.location }}
+                            {% if job.is_remote %}
+                            <span class="badge bg-info">Remote</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Salary Range:</strong><br>
+                            {% if job.salary_min and job.salary_max %}
+                                ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}
+                            {% elif job.salary_min %}
+                                ${{ job.salary_min|floatformat:0 }}+
+                            {% else %}
+                                Not specified
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Required Skills:</strong><br>
+                            {{ job.required_skills }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Additional Info:</strong><br>
+                            {% if job.visa_sponsorship %}
+                            <span class="badge bg-success">Visa Sponsorship Available</span><br>
+                            {% endif %}
+                            <strong>Created:</strong> {{ job.created_at|date:"M d, Y H:i" }}<br>
+                            <strong>Updated:</strong> {{ job.updated_at|date:"M d, Y H:i" }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Description:</strong>
+                        <div class="border p-3 mt-2 bg-light">
+                            {{ job.description|linebreaks }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Moderation Panel -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cogs"></i> Moderation Panel</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Current Status -->
+                    <div class="mb-3">
+                        <strong>Current Status:</strong><br>
+                        <span class="badge {% if job.status == 'active' %}bg-success{% elif job.status == 'inactive' %}bg-secondary{% elif job.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %} fs-6">
+                            {{ job.get_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Moderation Status:</strong><br>
+                        <span class="badge {% if job.moderation_status == 'approved' %}bg-success{% elif job.moderation_status == 'rejected' %}bg-danger{% elif job.moderation_status == 'pending' %}bg-warning{% else %}bg-info{% endif %} fs-6">
+                            {{ job.get_moderation_status_display }}
+                        </span>
+                    </div>
+
+                    {% if job.moderated_by %}
+                    <div class="mb-3">
+                        <strong>Last Moderated:</strong><br>
+                        By {{ job.moderated_by.username }} on {{ job.moderated_at|date:"M d, Y H:i" }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Moderation Actions -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="moderation_notes" class="form-label">Moderation Notes:</label>
+                            <textarea name="moderation_notes" id="moderation_notes" class="form-control" rows="4" 
+                                    placeholder="Add notes about your moderation decision...">{{ job.moderation_notes }}</textarea>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="action" value="approve" class="btn btn-success">
+                                <i class="fas fa-check"></i> Approve & Activate
+                            </button>
+                            
+                            <button type="submit" name="action" value="reject" class="btn btn-danger">
+                                <i class="fas fa-times"></i> Reject & Deactivate
+                            </button>
+                            
+                            <button type="submit" name="action" value="flag" class="btn btn-warning">
+                                <i class="fas fa-flag"></i> Flag for Review
+                            </button>
+                            
+                            <button type="submit" name="action" value="delete" class="btn btn-dark" 
+                                    onclick="return confirm('Are you sure you want to permanently delete this job posting? This action cannot be undone.')">
+                                <i class="fas fa-trash"></i> Delete Permanently
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-bolt"></i> Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="mailto:{{ job.recruiter.email }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-envelope"></i> Email Recruiter
+                        </a>
+                        
+                        <a href="{% url 'moderation_queue' %}?search={{ job.recruiter.username }}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-search"></i> View Other Posts by This Recruiter
+                        </a>
+                        
+                        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-home"></i> Admin Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Previous Moderation History -->
+    {% if job.moderation_notes %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Moderation History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="border-start border-4 border-info ps-3">
+                        <p class="mb-1"><strong>Notes:</strong></p>
+                        <p class="mb-0">{{ job.moderation_notes|linebreaks }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
