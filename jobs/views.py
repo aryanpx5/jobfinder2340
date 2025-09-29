@@ -137,6 +137,16 @@ def create_posting_view(request):
         if form.is_valid():
             posting = form.save(commit=False)
             posting.recruiter = request.user
+            # Newly created postings should be visible to job seekers by default.
+            # Set status and moderation_status to show up in the public search.
+            try:
+                posting.status = 'active'
+            except Exception:
+                pass
+            try:
+                posting.moderation_status = 'approved'
+            except Exception:
+                pass
             posting.save()
             messages.success(request, 'Job posting created successfully.')
             return redirect('my_postings')
