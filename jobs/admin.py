@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import JobSeekerProfile, JobPosting
+from .models import Message
 
 @admin.register(JobSeekerProfile)
 class JobSeekerProfileAdmin(admin.ModelAdmin):
@@ -32,3 +33,10 @@ class JobPostingAdmin(admin.ModelAdmin):
             from django.utils import timezone
             obj.moderated_at = timezone.now()
         super().save_model(request, obj, form, change)
+
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ['subject', 'sender', 'recipient', 'is_read', 'created_at']
+    list_filter = ['is_read', 'created_at']
+    search_fields = ['subject', 'body', 'sender__username', 'recipient__username']

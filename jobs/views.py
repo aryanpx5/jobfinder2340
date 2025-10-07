@@ -1,10 +1,15 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import JobSeekerProfile, JobPosting
+from .models import JobSeekerProfile, JobPosting, JobApplication
 from .forms import JobSeekerProfileForm, PrivacySettingsForm
-from .forms import JobPostingForm
-from django.http import HttpResponseForbidden
+from .forms import JobPostingForm, MessageForm
+from .models import Message
+from django.http import HttpResponseForbidden, HttpResponseRedirect
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+from django import forms
+from django.urls import reverse
 
 
 def recruiter_required(view_func):
@@ -116,6 +121,43 @@ def job_search_view(request):
     return render(request, 'jobs/job_search.html', context)
 
 
+class ApplyForm(forms.Form):
+    cover_letter = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 6, 'placeholder': 'Optional cover letter'}),
+        required=False
+    )
+
+
+@login_required
+def apply_to_posting_view(request, pk):
+    # Only job seekers may apply
+    if getattr(request.user, 'user_type', None) != 'job_seeker':
+        messages.error(request, 'Only job seekers can apply to postings.')
+        return redirect('job_search')
+
+    posting = get_object_or_404(JobPosting, pk=pk, status='active', moderation_status='approved')
+
+    # Prevent duplicate applications
+    if JobApplication.objects.filter(job=posting, applicant=request.user).exists():
+        messages.info(request, 'You have already applied to this job.')
+        return redirect('job_search')
+
+    if request.method == 'POST':
+        form = ApplyForm(request.POST)
+        if form.is_valid():
+            JobApplication.objects.create(
+                job=posting,
+                applicant=request.user,
+                cover_letter=form.cleaned_data.get('cover_letter', '')
+            )
+            messages.success(request, 'Application submitted successfully.')
+            return HttpResponseRedirect(reverse('job_search'))
+    else:
+        form = ApplyForm()
+
+    return render(request, 'jobs/apply.html', {'posting': posting, 'form': form})
+
+
 # -------------------------
 # RECRUITER: LIST OWN POSTINGS
 # -------------------------
@@ -124,6 +166,40 @@ def job_search_view(request):
 def my_postings_view(request):
     postings = JobPosting.objects.filter(recruiter=request.user)
     return render(request, 'jobs/my_postings.html', {'postings': postings})
+
+
+@login_required
+@recruiter_required
+def posting_applicants_view(request, pk):
+    posting = get_object_or_404(JobPosting, pk=pk)
+    if posting.recruiter != request.user:
+        return HttpResponseForbidden('You do not have permission to view applicants for this posting.')
+    applications = JobApplication.objects.filter(job=posting).select_related('applicant')
+    return render(request, 'jobs/applicants_list.html', {'posting': posting, 'applications': applications})
+
+
+@login_required
+@recruiter_required
+def conversation_view(request, posting_pk, applicant_pk):
+    posting = get_object_or_404(JobPosting, pk=posting_pk)
+    if posting.recruiter != request.user:
+        return HttpResponseForbidden('You do not have permission to view this conversation.')
+
+    # Ensure the applicant applied to this posting (defensive)
+    User = get_user_model()
+    applicant = get_object_or_404(User, pk=applicant_pk)
+    applied = JobApplication.objects.filter(job=posting, applicant=applicant).exists()
+    if not applied:
+        messages.error(request, 'That user has not applied to this posting.')
+        return redirect('posting_applicants', pk=posting.pk)
+
+    # Fetch messages between recruiter (request.user) and applicant
+    convo = Message.objects.filter(
+        (Q(sender=request.user) & Q(recipient=applicant)) |
+        (Q(sender=applicant) & Q(recipient=request.user))
+    ).order_by('created_at')
+
+    return render(request, 'jobs/conversation.html', {'posting': posting, 'applicant': applicant, 'messages': convo})
 
 
 # -------------------------
@@ -174,6 +250,97 @@ def edit_posting_view(request, pk):
     else:
         form = JobPostingForm(instance=posting)
     return render(request, 'jobs/edit_posting.html', {'form': form, 'posting': posting})
+
+
+# -------------------------
+# MESSAGING
+# -------------------------
+@login_required
+def inbox_view(request):
+    messages_qs = Message.objects.filter(recipient=request.user)
+    return render(request, 'jobs/messages/inbox.html', {'messages': messages_qs})
+
+
+@login_required
+def message_detail_view(request, pk):
+    msg = get_object_or_404(Message, pk=pk)
+    if msg.recipient != request.user and msg.sender != request.user:
+        return HttpResponseForbidden('You do not have permission to view this message.')
+    if msg.recipient == request.user and not msg.is_read:
+        msg.is_read = True
+        msg.save(update_fields=['is_read'])
+    return render(request, 'jobs/messages/detail.html', {'message': msg})
+
+
+@login_required
+def compose_message_view(request):
+    # Allow any authenticated user to compose messages. Job seekers may ONLY reply
+    # to messages that a recruiter sent them (reply_to=<message_id>); they cannot
+    # initiate new conversations to arbitrary recruiters.
+    recipient_prefill = request.GET.get('recipient')
+    reply_to = request.GET.get('reply_to')
+    orig_msg = None
+    if reply_to:
+        try:
+            orig_msg = get_object_or_404(Message, pk=int(reply_to))
+        except Exception:
+            orig_msg = None
+
+    # If the user is a job seeker and not replying to a recruiter message, block.
+    if getattr(request.user, 'user_type', None) == 'job_seeker' and not orig_msg:
+        messages.error(request, 'Job seekers cannot start new conversations. Reply to a recruiter message instead.')
+        return redirect('inbox')
+
+    if request.method == 'POST':
+        form = MessageForm(request.POST, sender=request.user)
+        if form.is_valid():
+            m = form.save(commit=False)
+            m.sender = request.user
+
+            # If sender is a job seeker, ensure they're replying to the same recruiter
+            if getattr(request.user, 'user_type', None) == 'job_seeker':
+                if not orig_msg or form.cleaned_data.get('recipient') != orig_msg.sender:
+                    messages.error(request, 'You may only reply to the recruiter who contacted you.')
+                    return redirect('inbox')
+
+            # If recipient is a job seeker, respect their allow_contact setting
+            try:
+                profile = JobSeekerProfile.objects.get(user=m.recipient)
+                if not profile.allow_contact and getattr(request.user, 'user_type', None) == 'recruiter':
+                    messages.error(request, 'This candidate has disabled direct contact.')
+                    return redirect('inbox')
+            except JobSeekerProfile.DoesNotExist:
+                pass
+
+            m.save()
+            messages.success(request, 'Message sent.')
+            return redirect('inbox')
+    else:
+        initial = {}
+        preset_recipient = None
+        if orig_msg:
+            # Pre-fill recipient to original sender (the recruiter)
+            initial['recipient'] = orig_msg.sender.id
+            if orig_msg.subject:
+                initial['subject'] = f"Re: {orig_msg.subject}"
+        elif recipient_prefill:
+            try:
+                initial['recipient'] = int(recipient_prefill)
+            except Exception:
+                pass
+
+        form = MessageForm(initial=initial, sender=request.user)
+
+        # If we have a preset recipient id, resolve the User object to display username
+        rid = initial.get('recipient')
+        if rid:
+            try:
+                User = get_user_model()
+                preset_recipient = User.objects.get(pk=rid)
+            except Exception:
+                preset_recipient = None
+
+    return render(request, 'jobs/messages/compose.html', {'form': form, 'preset_recipient': preset_recipient})
 
 
 # -------------------------

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Applicants for: {{ posting.title }}</h2>
+<a class="btn btn-secondary" href="{% url 'my_postings' %}">Back to Postings</a>
+<hr />
+
+{% if applications %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Applicant</th>
+                <th>Applied</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for app in applications %}
+            <tr>
+                <td>{{ app.applicant.username }}</td>
+                <td>{{ app.created_at }}</td>
+                <td>
+                    {% if user.is_authenticated and user.user_type == 'recruiter' %}
+                        <a class="btn btn-sm btn-primary" href="{% url 'compose_message' %}?recipient={{ app.applicant.id }}">Message</a>
+                        <a class="btn btn-sm btn-outline-secondary ms-2" href="{% url 'conversation_view' posting.pk app.applicant.pk %}">Conversation</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No applicants yet for this posting.</p>
+{% endif %}
+
+{% endblock %}

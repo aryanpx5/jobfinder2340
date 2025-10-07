@@ -1,6 +1,8 @@
 from django import forms
 from .models import JobSeekerProfile
 from .models import JobPosting
+from .models import Message
+from django.contrib.auth import get_user_model
 
 class JobSeekerProfileForm(forms.ModelForm):
     class Meta:
@@ -53,3 +55,39 @@ class PrivacySettingsForm(forms.ModelForm):
             'show_links': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'allow_contact': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ['recipient', 'subject', 'body']
+        widgets = {
+            'recipient': forms.Select(attrs={'class': 'form-control'}),
+            'subject': forms.TextInput(attrs={'class': 'form-control'}),
+            'body': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
+        }
+
+    def __init__(self, *args, sender=None, **kwargs):
+        """
+        Optionally accept a `sender` user to restrict the recipient queryset.
+        - If sender is a recruiter, recipients are job seekers.
+        - If sender is a job seeker, recipients are recruiters.
+        If sender is None or user_type cannot be determined, fall back to no restriction.
+        """
+        super().__init__(*args, **kwargs)
+        User = get_user_model()
+        try:
+            if sender is not None:
+                if getattr(sender, 'user_type', None) == 'recruiter':
+                    self.fields['recipient'].queryset = User.objects.filter(user_type='job_seeker')
+                elif getattr(sender, 'user_type', None) == 'job_seeker':
+                    self.fields['recipient'].queryset = User.objects.filter(user_type='recruiter')
+                else:
+                    # Unknown sender type -> no filtering
+                    pass
+            else:
+                # Default behavior: show job seekers (preserves prior behavior)
+                self.fields['recipient'].queryset = User.objects.filter(user_type='job_seeker')
+        except Exception:
+            # Safeguard during migrations or missing user_type attr
+            pass

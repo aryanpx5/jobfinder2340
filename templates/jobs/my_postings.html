@@ -11,6 +11,7 @@
             <h5>{{ p.title }} {% if p.status != 'active' %}<small>({{ p.get_status_display }})</small>{% endif %}</h5>
             <p>{{ p.location }} • {{ p.required_skills }}</p>
             <a href="{% url 'edit_posting' p.pk %}" class="btn btn-sm btn-secondary">Edit</a>
+            <a href="{% url 'posting_applicants' p.pk %}" class="btn btn-sm btn-info">Applicants</a>
         </li>
     {% endfor %}
     </ul>

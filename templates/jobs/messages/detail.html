@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{{ message.subject|default:'(no subject)' }}</h2>
+<p><small>From: {{ message.sender.username }} • Sent {{ message.created_at|timesince }} ago</small></p>
+<hr>
+<p>{{ message.body|linebreaks }}</p>
+<a class="btn btn-secondary" href="{% url 'inbox' %}">Back to Inbox</a>
+{% if user.is_authenticated and user.user_type == 'job_seeker' and message.sender.user_type == 'recruiter' and message.recipient == user %}
+	<a class="btn btn-primary ms-2" href="{% url 'compose_message' %}?reply_to={{ message.pk }}">Reply</a>
+{% endif %}
+{% endblock %}

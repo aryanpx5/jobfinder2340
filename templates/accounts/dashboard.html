@@ -21,6 +21,15 @@
         <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-body">
+                    <h5 class="card-title">Messages</h5>
+                    <p class="card-text">View messages sent to you by recruiters.</p>
+                    <a href="{% url 'inbox' %}" class="btn btn-primary">Open Inbox</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
                     <h5 class="card-title">Search Jobs</h5>
                     <p class="card-text">Find job opportunities that match your skills.</p>
                     <a href="{% url 'job_search' %}" class="btn btn-success">Search Jobs</a>

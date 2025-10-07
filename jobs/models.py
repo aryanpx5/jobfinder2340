@@ -66,3 +66,35 @@ class JobPosting(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class Message(models.Model):
+    """Simple internal messaging between users (recruiters and job seekers)."""
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    subject = models.CharField(max_length=255, blank=True)
+    body = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Message from {self.sender.username} to {self.recipient.username} - {self.subject[:30]}"
+
+
+class JobApplication(models.Model):
+    """Represents a job application by a user to a JobPosting.
+    Kept minimal: links applicant (User) to JobPosting and stores an optional cover letter.
+    """
+    job = models.ForeignKey(JobPosting, on_delete=models.CASCADE, related_name='applications')
+    applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='job_applications')
+    cover_letter = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Application by {self.applicant.username} for {self.job.title}"

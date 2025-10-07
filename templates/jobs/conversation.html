@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Conversation with {{ applicant.username }} — {{ posting.title }}</h2>
+<a class="btn btn-secondary mb-3" href="{% url 'posting_applicants' posting.pk %}">Back to Applicants</a>
+
+<div class="card">
+  <div class="card-body">
+    {% for msg in messages %}
+      <div class="mb-3">
+        <div><strong>{{ msg.sender.username }}</strong> <small class="text-muted">{{ msg.created_at|timesince }} ago</small></div>
+        <div>{{ msg.body|linebreaks }}</div>
+      </div>
+      <hr />
+    {% empty %}
+      <p>No messages yet.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{% if user.is_authenticated and user.user_type == 'recruiter' %}
+  <a class="btn btn-primary mt-3" href="{% url 'compose_message' %}?recipient={{ applicant.pk }}">Reply to Applicant</a>
+{% endif %}
+
+{% endblock %}

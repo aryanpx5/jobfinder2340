@@ -79,6 +79,13 @@
         </div>
         
         <small class="text-muted">Posted {{ job.created_at|timesince }} ago</small>
+        <div class="mt-2">
+            {% if user.is_authenticated and user.user_type == 'job_seeker' %}
+                <a class="btn btn-sm btn-primary" href="{% url 'apply_to_posting' job.pk %}">Apply</a>
+            {% else %}
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'job_search' %}">Sign in to apply</a>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% empty %}
