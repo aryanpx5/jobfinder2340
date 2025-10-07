@@ -85,6 +85,56 @@ def view_profile_view(request):
 
 
 # -------------------------
+# RECOMMENDATIONS VIEW
+# -------------------------
+@login_required
+def recommended_jobs_view(request):
+    """
+    Recommend active, approved jobs based on overlap between a job seeker's skills
+    and a job's required_skills. Uses simple case-insensitive token overlap.
+    """
+    if getattr(request.user, 'user_type', None) != 'job_seeker':
+        messages.error(request, 'Only job seekers receive recommendations.')
+        return redirect('dashboard')
+
+    try:
+        profile = JobSeekerProfile.objects.get(user=request.user)
+    except JobSeekerProfile.DoesNotExist:
+        messages.info(request, 'Create your profile to get recommendations.')
+        return redirect('create_profile')
+
+    # Normalize skills from profile
+    raw_skills = profile.skills or ''
+    profile_skills = [s.strip().lower() for s in raw_skills.split(',') if s.strip()]
+    profile_skill_set = set(profile_skills)
+
+    jobs_qs = JobPosting.objects.filter(status='active', moderation_status='approved')
+
+    # Score jobs by number of overlapping skills; include jobs with at least one match
+    scored = []
+    for job in jobs_qs:
+        job_skills = [s.strip().lower() for s in (job.required_skills or '').split(',') if s.strip()]
+        overlap = profile_skill_set.intersection(job_skills)
+        score = len(overlap)
+        if score > 0 or not profile_skill_set:
+            scored.append((score, overlap, job))
+
+    # Sort by score desc, then recency via created_at which is desc in Meta ordering
+    scored.sort(key=lambda t: t[0], reverse=True)
+
+    # Take top N
+    top = scored[:25]
+    recommendations = [job for _, __, job in top]
+
+    context = {
+        'profile': profile,
+        'recommendations': recommendations,
+        'profile_skills': profile_skills,
+    }
+    return render(request, 'jobs/recommendations.html', context)
+
+
+# -------------------------
 # JOB SEARCH VIEW
 # -------------------------
 def job_search_view(request):

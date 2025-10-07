@@ -6,6 +6,7 @@ urlpatterns = [
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('create_profile/', views.create_profile_view, name='create_profile'),
     path('view_profile/', views.view_profile_view, name='view_profile'),
+    path('recommendations/', views.recommended_jobs_view, name='recommendations'),
     path('job_search/', views.job_search_view, name='job_search'),
     path('postings/<int:pk>/apply/', views.apply_to_posting_view, name='apply_to_posting'),
 

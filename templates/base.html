@@ -12,6 +12,9 @@
             <a class="navbar-brand" href="{% url 'dashboard' %}">JobFinder2340</a>
             <div class="navbar-nav ms-auto d-flex align-items-center">
                 {% if user.is_authenticated %}
+                    {% if user.user_type == 'job_seeker' %}
+                        <a class="nav-link me-3 text-white" href="{% url 'recommendations' %}">Recommendations</a>
+                    {% endif %}
                     <a class="nav-link me-3 text-white" href="{% url 'inbox' %}">Inbox</a>
                     <span class="navbar-text me-3">Welcome, {{ user.username }} ({{ user.user_type|title }})</span>
                     <!-- Logout as a POST to be explicit and CSRF-protected; keep inline with username -->
