@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - JobFinder2340{% endblock %}
+
+{% block content %}
+<h1>Welcome to JobFinder2340</h1>
+<p class="lead">Hello {{ user.username }}, you are logged in as a {{ user.user_type|title }}.</p>
+
+{% if user.user_type == 'job_seeker' %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Your Profile</h5>
+                    <p class="card-text">Create and manage your professional profile.</p>
+                    <a href="{% url 'create_profile' %}" class="btn btn-primary">Create/Edit Profile</a>
+                    <a href="{% url 'view_profile' %}" class="btn btn-outline-primary ms-2">View Profile</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Messages</h5>
+                    <p class="card-text">View messages sent to you by recruiters.</p>
+                    <a href="{% url 'inbox' %}" class="btn btn-primary">Open Inbox</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Search Jobs</h5>
+                    <p class="card-text">Find job opportunities that match your skills.</p>
+                    <a href="{% url 'job_search' %}" class="btn btn-success">Search Jobs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Privacy Settings</h5>
+                    <p class="card-text">Control what recruiters can see about your profile.</p>
+                    <a href="{% url 'privacy_settings' %}" class="btn btn-warning">
+                        <i class="fas fa-shield-alt"></i> Manage Privacy
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% elif user.user_type == 'recruiter' %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Post a Job</h5>
+                    <p class="card-text">Create new job postings to find talent.</p>
+                    <a href="{% url 'create_posting' %}" class="btn btn-primary">Post Job</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Manage Jobs</h5>
+                    <p class="card-text">View and edit your job postings.</p>
+                    <a href="{% url 'my_postings' %}" class="btn btn-success">My Jobs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% elif user.user_type == 'admin' %}
+    <div class="alert alert-info">
+        <i class="fas fa-shield-alt"></i> <strong>Administrator Access:</strong> You have full administrative privileges to moderate content and export data.
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h5>
+                    <p class="card-text">View platform statistics and manage content moderation.</p>
+                    <a href="{% url 'admin_dashboard' %}" class="btn btn-primary">Admin Dashboard</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-gavel"></i> Job Moderation</h5>
+                    <p class="card-text">Review, approve, or reject job postings to prevent spam and abuse.</p>
+                    <a href="{% url 'moderation_queue' %}" class="btn btn-warning">Moderate Jobs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-download"></i> Data Export</h5>
+                    <p class="card-text">Export job postings, user data, and analytics for reporting purposes.</p>
+                    <div class="btn-group">
+                        <a href="{% url 'export_data' %}?type=jobs" class="btn btn-success">Export Jobs</a>
+                        <a href="{% url 'export_data' %}?type=users" class="btn btn-info">Export Users</a>
+                        <a href="{% url 'export_data' %}?type=analytics" class="btn btn-secondary">Export Analytics</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-cogs"></i> Django Admin</h5>
+                    <p class="card-text">Access the full Django admin interface for advanced management.</p>
+                    <a href="/admin/" class="btn btn-danger">Django Admin</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
