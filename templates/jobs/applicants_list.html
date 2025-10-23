@@ -2,35 +2,84 @@
 
 {% block content %}
 <h2>Applicants for: {{ posting.title }}</h2>
-<a class="btn btn-secondary" href="{% url 'my_postings' %}">Back to Postings</a>
+<a class="btn btn-secondary mb-3" href="{% url 'my_postings' %}">Back to Postings</a>
 <hr />
 
 {% if applications %}
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Applicant</th>
-                <th>Applied</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for app in applications %}
-            <tr>
-                <td>{{ app.applicant.username }}</td>
-                <td>{{ app.created_at }}</td>
-                <td>
-                    {% if user.is_authenticated and user.user_type == 'recruiter' %}
-                        <a class="btn btn-sm btn-primary" href="{% url 'compose_message' %}?recipient={{ app.applicant.id }}">Message</a>
-                        <a class="btn btn-sm btn-outline-secondary ms-2" href="{% url 'conversation_view' posting.pk app.applicant.pk %}">Conversation</a>
-                    {% endif %}
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Applicant</th>
+                    <th>Applied</th>
+                    <th>Status</th>
+                    <th>Last Updated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for app in applications %}
+                <tr>
+                    <td>
+                        <strong>{{ app.applicant.username }}</strong>
+                        {% if app.cover_letter %}
+                            <br><small class="text-muted">Has cover letter</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ app.created_at|date:"M d, Y" }}</td>
+                    <td>
+                        {% if app.status == 'applied' %}
+                            <span class="badge bg-secondary">{{ app.get_status_display }}</span>
+                        {% elif app.status == 'review' %}
+                            <span class="badge bg-info">{{ app.get_status_display }}</span>
+                        {% elif app.status == 'interview' %}
+                            <span class="badge bg-warning text-dark">{{ app.get_status_display }}</span>
+                        {% elif app.status == 'offer' %}
+                            <span class="badge bg-success">{{ app.get_status_display }}</span>
+                        {% elif app.status == 'closed' %}
+                            <span class="badge bg-dark">{{ app.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ app.updated_at|date:"M d, Y" }}</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                                Update Status
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><h6 class="dropdown-header">Change Status To:</h6></li>
+                                {% for status_code, status_label in status_choices %}
+                                    <li>
+                                        <form method="post" action="{% url 'update_application_status' app.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="status" value="{{ status_code }}">
+                                            <button type="submit" class="dropdown-item {% if app.status == status_code %}active{% endif %}">
+                                                {{ status_label }}
+                                            </button>
+                                        </form>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <a class="btn btn-sm btn-primary ms-2" href="{% url 'compose_message' %}?recipient={{ app.applicant.id }}">Message</a>
+                        <a class="btn btn-sm btn-outline-secondary ms-1" href="{% url 'conversation_view' posting.pk app.applicant.pk %}">View Chat</a>
+                    </td>
+                </tr>
+                {% if app.status_notes %}
+                <tr>
+                    <td colspan="5" class="bg-light">
+                        <small><strong>Notes:</strong> {{ app.status_notes }}</small>
+                    </td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% else %}
-    <p>No applicants yet for this posting.</p>
+    <div class="alert alert-info">
+        <p class="mb-0">No applicants yet for this posting.</p>
+    </div>
 {% endif %}
 
 {% endblock %}

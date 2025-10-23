@@ -226,7 +226,11 @@ def posting_applicants_view(request, pk):
     if posting.recruiter != request.user:
         return HttpResponseForbidden('You do not have permission to view applicants for this posting.')
     applications = JobApplication.objects.filter(job=posting).select_related('applicant')
-    return render(request, 'jobs/applicants_list.html', {'posting': posting, 'applications': applications})
+    return render(request, 'jobs/applicants_list.html', {
+        'posting': posting, 
+        'applications': applications,
+        'status_choices': JobApplication.STATUS_CHOICES
+    })
 
 
 @login_required
@@ -251,6 +255,45 @@ def conversation_view(request, posting_pk, applicant_pk):
     ).order_by('created_at')
 
     return render(request, 'jobs/conversation.html', {'posting': posting, 'applicant': applicant, 'messages': convo})
+
+
+@login_required
+@recruiter_required
+def update_application_status_view(request, application_id):
+    """Allow recruiters to update the status of an application"""
+    application = get_object_or_404(JobApplication, pk=application_id)
+    
+    # Ensure the recruiter owns this job posting
+    if application.job.recruiter != request.user:
+        return HttpResponseForbidden('You do not have permission to update this application.')
+    
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        status_notes = request.POST.get('status_notes', '')
+        
+        if new_status in dict(JobApplication.STATUS_CHOICES):
+            application.status = new_status
+            application.status_notes = status_notes
+            application.save()
+            messages.success(request, f'Application status updated to "{application.get_status_display()}".')
+        else:
+            messages.error(request, 'Invalid status selected.')
+        
+        return redirect('posting_applicants', pk=application.job.pk)
+    
+    return redirect('posting_applicants', pk=application.job.pk)
+
+
+@login_required
+def my_applications_view(request):
+    """View for job seekers to see all their applications and their statuses"""
+    if request.user.user_type != 'job_seeker':
+        messages.error(request, 'Only job seekers can view applications.')
+        return redirect('dashboard')
+    
+    applications = JobApplication.objects.filter(applicant=request.user).select_related('job', 'job__recruiter')
+    
+    return render(request, 'jobs/my_applications.html', {'applications': applications})
 
 
 # -------------------------

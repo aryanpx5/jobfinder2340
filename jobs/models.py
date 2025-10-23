@@ -88,15 +88,26 @@ class Message(models.Model):
 
 class JobApplication(models.Model):
     """Represents a job application by a user to a JobPosting.
-    Kept minimal: links applicant (User) to JobPosting and stores an optional cover letter.
+    Tracks the application through various stages from submission to closure.
     """
+    STATUS_CHOICES = (
+        ('applied', 'Applied'),
+        ('review', 'Under Review'),
+        ('interview', 'Interview'),
+        ('offer', 'Offer Extended'),
+        ('closed', 'Closed'),
+    )
+    
     job = models.ForeignKey(JobPosting, on_delete=models.CASCADE, related_name='applications')
     applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='job_applications')
     cover_letter = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')
+    status_notes = models.TextField(blank=True, help_text="Internal notes about application status")
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"Application by {self.applicant.username} for {self.job.title}"
+        return f"Application by {self.applicant.username} for {self.job.title} ({self.get_status_display()})"

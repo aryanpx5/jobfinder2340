@@ -14,6 +14,7 @@
                 {% if user.is_authenticated %}
                     {% if user.user_type == 'job_seeker' %}
                         <a class="nav-link me-3 text-white" href="{% url 'recommendations' %}">Recommendations</a>
+                        <a class="nav-link me-3 text-white" href="{% url 'my_applications' %}">My Applications</a>
                     {% endif %}
                     <a class="nav-link me-3 text-white" href="{% url 'job_search' %}">Job Search</a>
                     <a class="nav-link me-3 text-white" href="{% url 'job_map' %}">Job Map</a>

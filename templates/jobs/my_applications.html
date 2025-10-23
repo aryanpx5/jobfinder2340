@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}My Applications - JobFinder2340{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>My Job Applications</h2>
+    <p class="text-muted">Track the status of all your job applications</p>
+    <hr />
+
+    {% if applications %}
+        <div class="row">
+            {% for app in applications %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ app.job.title }}</h5>
+                            {% if app.status == 'applied' %}
+                                <span class="badge bg-secondary">{{ app.get_status_display }}</span>
+                            {% elif app.status == 'review' %}
+                                <span class="badge bg-info">{{ app.get_status_display }}</span>
+                            {% elif app.status == 'interview' %}
+                                <span class="badge bg-warning text-dark">{{ app.get_status_display }}</span>
+                            {% elif app.status == 'offer' %}
+                                <span class="badge bg-success">{{ app.get_status_display }}</span>
+                            {% elif app.status == 'closed' %}
+                                <span class="badge bg-dark">{{ app.get_status_display }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-2 text-muted">
+                                <i class="fas fa-building"></i> {{ app.job.recruiter.username }}
+                            </h6>
+                            <p class="card-text">
+                                <strong>Location:</strong> {{ app.job.location }}<br>
+                                {% if app.job.salary_min and app.job.salary_max %}
+                                    <strong>Salary:</strong> ${{ app.job.salary_min|floatformat:0 }} - ${{ app.job.salary_max|floatformat:0 }}<br>
+                                {% endif %}
+                                <strong>Applied:</strong> {{ app.created_at|date:"M d, Y" }}<br>
+                                <strong>Last Updated:</strong> {{ app.updated_at|date:"M d, Y" }}
+                            </p>
+                            
+                            {% if app.job.is_remote %}
+                                <span class="badge bg-success mb-2">Remote</span>
+                            {% endif %}
+                            {% if app.job.visa_sponsorship %}
+                                <span class="badge bg-info mb-2">Visa Sponsorship</span>
+                            {% endif %}
+
+                            <!-- Status Timeline -->
+                            <div class="mt-3">
+                                <h6>Application Progress:</h6>
+                                <div class="progress" style="height: 25px;">
+                                    {% if app.status == 'applied' %}
+                                        <div class="progress-bar bg-secondary" role="progressbar" style="width: 20%">Applied</div>
+                                    {% elif app.status == 'review' %}
+                                        <div class="progress-bar bg-info" role="progressbar" style="width: 40%">Under Review</div>
+                                    {% elif app.status == 'interview' %}
+                                        <div class="progress-bar bg-warning" role="progressbar" style="width: 60%">Interview</div>
+                                    {% elif app.status == 'offer' %}
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 80%">Offer</div>
+                                    {% elif app.status == 'closed' %}
+                                        <div class="progress-bar bg-dark" role="progressbar" style="width: 100%">Closed</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if app.cover_letter %}
+                                <div class="mt-3">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#cover-{{ app.id }}">
+                                        View My Cover Letter
+                                    </button>
+                                    <div class="collapse mt-2" id="cover-{{ app.id }}">
+                                        <div class="card card-body bg-light">
+                                            <small>{{ app.cover_letter }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer">
+                            <a href="{% url 'compose_message' %}?recipient={{ app.job.recruiter.id }}&reply_to=" class="btn btn-sm btn-primary">
+                                <i class="fas fa-envelope"></i> Contact Recruiter
+                            </a>
+                            <a href="{% url 'job_search' %}" class="btn btn-sm btn-outline-secondary">
+                                View Job Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> No Applications Yet</h5>
+            <p>You haven't applied to any jobs yet. Start exploring opportunities!</p>
+            <a href="{% url 'job_search' %}" class="btn btn-primary">Search Jobs</a>
+            <a href="{% url 'recommendations' %}" class="btn btn-success">View Recommendations</a>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

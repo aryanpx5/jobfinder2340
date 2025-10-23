@@ -17,9 +17,13 @@ urlpatterns = [
     path('postings/create/', views.create_posting_view, name='create_posting'),
     path('postings/<int:pk>/edit/', views.edit_posting_view, name='edit_posting'),
 
-        # Applicants route
-        path('postings/<int:pk>/applicants/', views.posting_applicants_view, name='posting_applicants'),
-        path('postings/<int:posting_pk>/applicants/<int:applicant_pk>/conversation/', views.conversation_view, name='conversation_view'),
+    # Applicants and applications
+    path('postings/<int:pk>/applicants/', views.posting_applicants_view, name='posting_applicants'),
+    path('postings/<int:posting_pk>/applicants/<int:applicant_pk>/conversation/', views.conversation_view, name='conversation_view'),
+    path('applications/<int:application_id>/update-status/', views.update_application_status_view, name='update_application_status'),
+    
+    # Job seeker applications tracking
+    path('my_applications/', views.my_applications_view, name='my_applications'),
 
     # Messaging
     path('messages/inbox/', views.inbox_view, name='inbox'),
