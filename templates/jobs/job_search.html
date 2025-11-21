@@ -2,6 +2,16 @@
 
 {% block title %}Search Jobs - JobFinder2340{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+    #jobs-map {
+        height: 420px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <h2>Search Jobs</h2>
 
@@ -47,11 +57,37 @@
     </div>
 </div>
 
+<!-- Map & Distance Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+            <div>
+                <h5 class="card-title mb-1">Map & Nearby Filter</h5>
+                <p class="text-muted small mb-0" id="location-status">
+                    Allow location access to highlight roles near you.
+                </p>
+            </div>
+            <div class="w-100 w-md-50 mt-3 mt-md-0">
+                <label class="form-label mb-1">Distance: <span id="distance-value">25</span> miles</label>
+                <input type="range" min="5" max="4000" value="25" class="form-range" id="distance-range" step="25">
+            </div>
+        </div>
+        <div id="jobs-map" class="mt-3 border rounded"></div>
+    </div>
+</div>
+
 <!-- Search Results -->
-<h4>Found {{ jobs|length }} job{{ jobs|length|pluralize }}</h4>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h4 class="mb-0">Found <span id="job-count">{{ jobs|length }}</span> job{{ jobs|length|pluralize }}</h4>
+    <span class="text-muted small" id="distance-summary"></span>
+</div>
 
 {% for job in jobs %}
-<div class="card mb-3">
+<div class="card mb-3 job-card"
+     data-job-id="{{ job.id }}"
+     data-job-title="{{ job.title|escape }}"
+     data-job-location="{{ job.location|escape }}"
+     data-job-url="{% url 'apply_to_posting' job.pk %}">
     <div class="card-body">
         <h5 class="card-title">{{ job.title }}</h5>
         <h6 class="card-subtitle mb-2 text-muted">{{ job.recruiter.username }} • {{ job.location }}</h6>
@@ -94,4 +130,195 @@
 </div>
 {% endfor %}
 
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const mapContainer = document.getElementById('jobs-map');
+    const distanceInput = document.getElementById('distance-range');
+    const distanceValueEl = document.getElementById('distance-value');
+    const distanceSummaryEl = document.getElementById('distance-summary');
+    const jobCountEl = document.getElementById('job-count');
+    const locationStatusEl = document.getElementById('location-status');
+    const distanceStorageKey = 'jobDistanceMiles';
+
+    if (!mapContainer) {
+        return;
+    }
+
+    // Restore the last distance the user selected, if available.
+    if (distanceInput) {
+        const storedDistance = parseInt(localStorage.getItem(distanceStorageKey), 10);
+        if (!Number.isNaN(storedDistance) && storedDistance >= Number(distanceInput.min) && storedDistance <= Number(distanceInput.max)) {
+            distanceInput.value = storedDistance;
+            if (distanceValueEl) distanceValueEl.textContent = storedDistance;
+        }
+    }
+
+    const jobCards = Array.from(document.querySelectorAll('.job-card')).map(card => ({
+        id: card.dataset.jobId,
+        title: card.dataset.jobTitle,
+        location: card.dataset.jobLocation,
+        url: card.dataset.jobUrl,
+        cardEl: card,
+        marker: null,
+        coords: null
+    }));
+
+    const geocodeCache = {};
+    let userLocation = null;
+    let userMarker = null;
+    let userRadius = null;
+
+    const map = L.map('jobs-map').setView([37.8, -96], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    const haversineMiles = (a, b) => {
+        const toRad = deg => deg * Math.PI / 180;
+        const R = 6371; // km
+        const dLat = toRad(b[0] - a[0]);
+        const dLon = toRad(b[1] - a[1]);
+        const lat1 = toRad(a[0]);
+        const lat2 = toRad(b[0]);
+        const sinDLat = Math.sin(dLat / 2);
+        const sinDLon = Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(
+            Math.sqrt(sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon),
+            Math.sqrt(1 - (sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon))
+        );
+        return (R * c) * 0.621371;
+    };
+
+    const updateStatus = text => {
+        if (locationStatusEl) {
+            locationStatusEl.textContent = text;
+        }
+    };
+
+    const updateSummary = (visible, maxMiles) => {
+        if (!distanceSummaryEl) return;
+        if (!userLocation) {
+            distanceSummaryEl.textContent = 'Showing all jobs. Turn on location to filter by distance.';
+            return;
+        }
+        distanceSummaryEl.textContent = `Showing ${visible}/${jobCards.length} within ${maxMiles} miles of you.`;
+    };
+
+    const filterByDistance = () => {
+        const maxMiles = Number(distanceInput?.value || 0);
+        if (distanceValueEl) {
+            distanceValueEl.textContent = maxMiles || 0;
+        }
+
+        let visible = 0;
+        jobCards.forEach(job => {
+            const inRange = !userLocation || !job.coords
+                ? true
+                : haversineMiles(userLocation, job.coords) <= maxMiles;
+
+            if (inRange) {
+                job.cardEl.classList.remove('d-none');
+                visible += 1;
+                if (job.marker && !map.hasLayer(job.marker)) {
+                    job.marker.addTo(map);
+                }
+            } else {
+                job.cardEl.classList.add('d-none');
+                if (job.marker && map.hasLayer(job.marker)) {
+                    map.removeLayer(job.marker);
+                }
+            }
+        });
+
+        if (jobCountEl) {
+            jobCountEl.textContent = visible;
+        }
+        updateSummary(visible, maxMiles);
+    };
+
+    const geocode = async (location) => {
+        if (!location) return null;
+        if (geocodeCache[location]) return geocodeCache[location];
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
+            const data = await res.json();
+            if (Array.isArray(data) && data.length) {
+                const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                geocodeCache[location] = coords;
+                return coords;
+            }
+        } catch (err) {
+            console.error('Geocoding failed for', location, err);
+        }
+        geocodeCache[location] = null;
+        return null;
+    };
+
+    const addJobMarkers = async () => {
+        for (const job of jobCards) {
+            const coords = await geocode(job.location);
+            if (!coords) continue;
+            job.coords = coords;
+            job.marker = L.marker(coords, { title: job.title })
+                .bindPopup(`<strong>${job.title}</strong><br>${job.location}<br><a href="${job.url}" class="mt-1 d-inline-block">Apply</a>`);
+            job.marker.addTo(map);
+        }
+        filterByDistance();
+    };
+
+    const setUserLocation = (coords) => {
+        userLocation = coords;
+        const miles = Number(distanceInput?.value || 0);
+        if (userMarker) {
+            map.removeLayer(userMarker);
+        }
+        if (userRadius) {
+            map.removeLayer(userRadius);
+        }
+        userMarker = L.marker(coords, { icon: L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+        })}).addTo(map).bindPopup('You are here');
+        userRadius = L.circle(coords, { radius: miles * 1609.34, color: '#0d6efd', fillOpacity: 0.08 }).addTo(map);
+        map.setView(coords, 10);
+        filterByDistance();
+    };
+
+    const requestGeolocation = () => {
+        if (!navigator.geolocation) {
+            updateStatus('Geolocation is not available in your browser. Showing all jobs.');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const coords = [position.coords.latitude, position.coords.longitude];
+                updateStatus('Location detected. Filtering jobs near you.');
+                setUserLocation(coords);
+            },
+            () => updateStatus('Location was blocked. Showing all jobs without distance filtering.')
+        );
+    };
+
+    distanceInput?.addEventListener('input', () => {
+        const miles = Number(distanceInput.value);
+        if (userRadius && userLocation) {
+            userRadius.setRadius(miles * 1609.34);
+        }
+        try {
+            localStorage.setItem(distanceStorageKey, String(miles));
+        } catch (err) {
+            // Storage might be unavailable; ignore.
+        }
+        filterByDistance();
+    });
+
+    requestGeolocation();
+    addJobMarkers();
+});
+</script>
 {% endblock %}
