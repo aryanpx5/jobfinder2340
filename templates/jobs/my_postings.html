@@ -12,6 +12,7 @@
             <p>{{ p.location }} • {{ p.required_skills }}</p>
             <a href="{% url 'edit_posting' p.pk %}" class="btn btn-sm btn-secondary">Edit</a>
             <a href="{% url 'posting_applicants' p.pk %}" class="btn btn-sm btn-info">Applicants</a>
+            <a href="{% url 'posting_recommendations' p.pk %}" class="btn btn-sm btn-outline-primary">Recommendations</a>
         </li>
     {% endfor %}
     </ul>

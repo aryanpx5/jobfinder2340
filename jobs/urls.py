@@ -18,6 +18,7 @@ urlpatterns = [
         # Applicants route
         path('postings/<int:pk>/applicants/', views.posting_applicants_view, name='posting_applicants'),
         path('postings/<int:posting_pk>/applicants/<int:applicant_pk>/conversation/', views.conversation_view, name='conversation_view'),
+        path('postings/<int:pk>/recommendations/', views.posting_recommendations_view, name='posting_recommendations'),
 
     # Messaging
     path('messages/inbox/', views.inbox_view, name='inbox'),

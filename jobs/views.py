@@ -230,6 +230,61 @@ def posting_applicants_view(request, pk):
 
 @login_required
 @recruiter_required
+def posting_recommendations_view(request, pk):
+    """Recommend job seeker profiles for a specific posting based on skill overlap."""
+    posting = get_object_or_404(JobPosting, pk=pk)
+    if posting.recruiter != request.user:
+        return HttpResponseForbidden('You do not have permission to view recommendations for this posting.')
+
+    # Normalize required skills for the job
+    job_skill_set = set(
+        s.strip().lower()
+        for s in (posting.required_skills or '').split(',')
+        if s.strip()
+    )
+
+    # Exclude people who already applied to this posting
+    applied_ids = JobApplication.objects.filter(job=posting).values_list('applicant_id', flat=True)
+
+    profiles = JobSeekerProfile.objects.filter(profile_visible=True).exclude(user_id__in=applied_ids)
+
+    recommendations = []
+    for profile in profiles:
+        seeker_skills = [
+            s.strip().lower() for s in (profile.skills or '').split(',') if s.strip()
+        ]
+        overlap = job_skill_set.intersection(seeker_skills) if job_skill_set else set()
+        score = len(overlap)
+
+        # If the job lists skills, keep only profiles with at least one match
+        if job_skill_set and score == 0:
+            continue
+
+        coverage_pct = 0
+        if job_skill_set:
+            coverage_pct = round((score / len(job_skill_set)) * 100)
+
+        recommendations.append({
+            'profile': profile,
+            'overlap': sorted(overlap),
+            'score': score,
+            'coverage_pct': coverage_pct,
+            'allow_contact': getattr(profile, 'allow_contact', True),
+        })
+
+    # Sort by score desc, then coverage, then most recently updated profile
+    recommendations.sort(key=lambda r: (r['score'], r['coverage_pct'], r['profile'].updated_at), reverse=True)
+
+    context = {
+        'posting': posting,
+        'recommendations': recommendations,
+        'job_skill_set': sorted(job_skill_set),
+    }
+    return render(request, 'jobs/posting_recommendations.html', context)
+
+
+@login_required
+@recruiter_required
 def conversation_view(request, posting_pk, applicant_pk):
     posting = get_object_or_404(JobPosting, pk=posting_pk)
     if posting.recruiter != request.user:
