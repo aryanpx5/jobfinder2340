@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Inbox</h2>
+{% if user.is_authenticated and user.user_type == 'recruiter' %}
+  <a class="btn btn-primary mb-3" href="{% url 'compose_message' %}">Compose</a>
+{% endif %}
+<ul class="list-group">
+{% for msg in messages %}
+  <li class="list-group-item">
+    <a href="{% url 'message_detail' msg.pk %}"><strong>{% if not msg.is_read %}<span class="badge bg-warning me-2">New</span>{% endif %}{{ msg.subject|default:'(no subject)' }}</strong></a>
+    <div><small>From: {{ msg.sender.username }} • {{ msg.created_at|timesince }} ago</small></div>
+  </li>
+{% empty %}
+  <li class="list-group-item">No messages.</li>
+{% endfor %}
+</ul>
+{% endblock %}

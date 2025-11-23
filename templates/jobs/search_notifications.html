@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Notifications{% endblock %}
+
+{% block content %}
+<h2>Search Notifications</h2>
+
+<div class="mb-3">
+    <a href="{% url 'saved_searches' %}" class="btn btn-secondary">Back to Saved Searches</a>
+</div>
+
+{% if notifications %}
+    <div class="list-group">
+        {% for notification in notifications %}
+            <div class="list-group-item {% if not notification.is_read %}list-group-item-info{% endif %}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">
+                            {% if not notification.is_read %}
+                                <span class="badge bg-primary me-2">New</span>
+                            {% endif %}
+                            New Match: {{ notification.candidate.user.username }}
+                        </h5>
+                        <p class="mb-1">
+                            <strong>Search:</strong> {{ notification.saved_search.name }}
+                        </p>
+                        <p class="mb-1">
+                            <strong>Candidate:</strong> {{ notification.candidate.headline|default:"No headline" }}
+                            {% if notification.candidate.location %}
+                                • <i class="fas fa-map-marker-alt"></i> {{ notification.candidate.location }}
+                            {% endif %}
+                        </p>
+                        <p class="text-muted small mb-0">
+                            {{ notification.created_at|timesince }} ago
+                        </p>
+                    </div>
+                    <div class="ms-3">
+                        <a href="{% url 'run_saved_search' notification.saved_search.id %}" 
+                           class="btn btn-sm btn-primary">View Search</a>
+                        {% if not notification.is_read %}
+                            <button class="btn btn-sm btn-outline-secondary mark-read-btn" 
+                                    data-notification-id="{{ notification.id }}">
+                                Mark Read
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">No notifications yet.</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const markReadButtons = document.querySelectorAll('.mark-read-btn');
+    markReadButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const notificationId = this.getAttribute('data-notification-id');
+            fetch(`{% url 'mark_notification_read' 0 %}`.replace('0', notificationId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
+

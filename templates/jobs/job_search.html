@@ -1,0 +1,641 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Jobs - JobFinder2340{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+    #jobs-map {
+        height: 420px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>Search Jobs</h2>
+
+<!-- Search Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get">
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Job Title</label>
+                    <input type="text" name="title" class="form-control" value="{{ search_params.title }}" placeholder="e.g., Developer">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Location</label>
+                    <input type="text" name="location" class="form-control" value="{{ search_params.location }}" placeholder="e.g., Atlanta">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Skills</label>
+                    <input type="text" name="skills" class="form-control" value="{{ search_params.skills }}" placeholder="e.g., Python">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Min Salary</label>
+                    <input type="number" name="salary_min" class="form-control" value="{{ search_params.salary_min }}" placeholder="50000">
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input type="checkbox" name="is_remote" value="true" class="form-check-input" {% if search_params.is_remote == 'true' %}checked{% endif %}>
+                        <label class="form-check-label">Remote Work</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input type="checkbox" name="visa_sponsorship" value="true" class="form-check-input" {% if search_params.visa_sponsorship == 'true' %}checked{% endif %}>
+                        <label class="form-check-label">Visa Sponsorship</label>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">Search Jobs</button>
+            <a href="{% url 'job_search' %}" class="btn btn-secondary mt-3">Clear Filters</a>
+        </form>
+    </div>
+</div>
+
+<!-- Map & Distance Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12">
+                <h5 class="card-title mb-1">
+                    <i class="fas fa-map-marked-alt"></i> Map & Distance Filters
+                </h5>
+                <p class="text-muted small mb-0" id="location-status">
+                    Allow location access to filter jobs by distance.
+                </p>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <!-- Commute Radius Filter -->
+            <div class="col-md-6">
+                <div class="border-end pe-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label mb-0">
+                            <strong><i class="fas fa-car"></i> Commute Radius:</strong> 
+                            <span id="commute-value" class="text-primary">25</span> miles
+                        </label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="commute-filter-toggle" checked>
+                            <label class="form-check-label small" for="commute-filter-toggle">
+                                <span id="commute-toggle-label">On</span>
+                            </label>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-2">Filter jobs you'd actually commute to</p>
+                    <input type="range" min="5" max="100" value="25" class="form-range" id="commute-range" step="5">
+                    <div class="d-flex gap-2 mt-2 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-outline-secondary preset-commute" data-distance="10">10 mi</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary preset-commute" data-distance="25">25 mi</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary preset-commute" data-distance="50">50 mi</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary preset-commute" data-distance="100">100 mi</button>
+                        {% if user.is_authenticated and user.user_type == 'job_seeker' %}
+                        <button type="button" class="btn btn-sm btn-success" id="save-radius-btn" title="Save this as your default commute preference">
+                            <i class="fas fa-save"></i> Save
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Map Distance Filter -->
+            <div class="col-md-6">
+                <div class="ps-md-3 mt-3 mt-md-0">
+                    <label class="form-label mb-1">
+                        <strong><i class="fas fa-globe"></i> Map View Distance:</strong> 
+                        <span id="map-distance-value" class="text-success">100</span> miles
+                    </label>
+                    <p class="text-muted small mb-2">Show jobs on map within this distance</p>
+                    <input type="range" min="5" max="10000" value="100" class="form-range" id="map-distance-range" step="25">
+                    <div class="d-flex gap-2 mt-2 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-outline-success preset-map-distance" data-distance="50">50 mi</button>
+                        <button type="button" class="btn btn-sm btn-outline-success preset-map-distance" data-distance="100">100 mi</button>
+                        <button type="button" class="btn btn-sm btn-outline-success preset-map-distance" data-distance="500">500 mi</button>
+                        <button type="button" class="btn btn-sm btn-outline-success preset-map-distance" data-distance="1000">1000 mi</button>
+                        <button type="button" class="btn btn-sm btn-outline-success preset-map-distance" data-distance="10000">All</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="jobs-map" class="mt-3 border rounded" data-preferred-radius="{{ preferred_radius|default:25 }}"></div>
+    </div>
+</div>
+
+<!-- Search Results -->
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h4 class="mb-0">Found <span id="job-count">{{ jobs|length }}</span> job{{ jobs|length|pluralize }}</h4>
+    <span class="text-muted small" id="distance-summary"></span>
+</div>
+
+{% for job in jobs %}
+<div class="card mb-3 job-card"
+     data-job-id="{{ job.id }}"
+     data-job-title="{{ job.title|escape }}"
+     data-job-location="{{ job.location|escape }}"
+     data-job-lat="{{ job.latitude|default:'' }}"
+     data-job-lon="{{ job.longitude|default:'' }}"
+     data-job-url="{% url 'apply_to_posting' job.pk %}">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <h5 class="card-title mb-0">{{ job.title }}</h5>
+            <span class="badge bg-light text-dark job-distance" data-job-id="{{ job.id }}" style="display: none;">
+                <i class="fas fa-map-marker-alt"></i> <span class="distance-text"></span>
+            </span>
+        </div>
+        <h6 class="card-subtitle mb-2 text-muted">{{ job.recruiter.username }} • {{ job.location }}</h6>
+        
+        <p class="card-text">{{ job.description|truncatewords:30 }}</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <small><strong>Required Skills:</strong> {{ job.required_skills }}</small>
+            </div>
+            <div class="col-md-6">
+                {% if job.salary_min and job.salary_max %}
+                    <small><strong>Salary:</strong> ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}</small>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="mt-2">
+            {% if job.is_remote %}
+                <span class="badge bg-success">Remote</span>
+            {% endif %}
+            {% if job.visa_sponsorship %}
+                <span class="badge bg-info">Visa Sponsorship</span>
+            {% endif %}
+        </div>
+        
+        <small class="text-muted">Posted {{ job.created_at|timesince }} ago</small>
+        <div class="mt-2">
+            {% if user.is_authenticated and user.user_type == 'job_seeker' %}
+                <a class="btn btn-sm btn-primary" href="{% url 'apply_to_posting' job.pk %}">Apply</a>
+            {% else %}
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'job_search' %}">Sign in to apply</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% empty %}
+<div class="alert alert-info">
+    No jobs found matching your criteria. Try adjusting your search filters.
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const mapContainer = document.getElementById('jobs-map');
+    const commuteInput = document.getElementById('commute-range');
+    const mapDistanceInput = document.getElementById('map-distance-range');
+    const commuteValueEl = document.getElementById('commute-value');
+    const mapDistanceValueEl = document.getElementById('map-distance-value');
+    const distanceSummaryEl = document.getElementById('distance-summary');
+    const jobCountEl = document.getElementById('job-count');
+    const locationStatusEl = document.getElementById('location-status');
+    const commuteFilterToggle = document.getElementById('commute-filter-toggle');
+    const commuteToggleLabel = document.getElementById('commute-toggle-label');
+    const commuteStorageKey = 'jobCommuteRadius';
+    const mapDistanceStorageKey = 'jobMapDistance';
+    const commuteToggleStorageKey = 'jobCommuteFilterEnabled';
+
+    if (!mapContainer) {
+        return;
+    }
+
+    // Restore commute filter toggle state
+    const commuteFilterEnabled = localStorage.getItem(commuteToggleStorageKey) !== 'false';
+    if (commuteFilterToggle) {
+        commuteFilterToggle.checked = commuteFilterEnabled;
+        if (commuteToggleLabel) {
+            commuteToggleLabel.textContent = commuteFilterEnabled ? 'On' : 'Off';
+        }
+    }
+
+    // Restore commute radius (localStorage > profile preference > default)
+    if (commuteInput) {
+        const preferredRadius = parseInt(mapContainer.dataset.preferredRadius, 10) || 25;
+        const storedCommute = parseInt(localStorage.getItem(commuteStorageKey), 10);
+        
+        let initialCommute = preferredRadius;
+        if (!Number.isNaN(storedCommute) && storedCommute >= Number(commuteInput.min) && storedCommute <= Number(commuteInput.max)) {
+            initialCommute = storedCommute;
+        }
+        
+        commuteInput.value = initialCommute;
+        if (commuteValueEl) commuteValueEl.textContent = initialCommute;
+    }
+
+    // Restore map distance filter
+    if (mapDistanceInput) {
+        const storedMapDistance = parseInt(localStorage.getItem(mapDistanceStorageKey), 10);
+        let initialMapDistance = 100; // default
+        
+        if (!Number.isNaN(storedMapDistance) && storedMapDistance >= Number(mapDistanceInput.min) && storedMapDistance <= Number(mapDistanceInput.max)) {
+            initialMapDistance = storedMapDistance;
+        }
+        
+        mapDistanceInput.value = initialMapDistance;
+        if (mapDistanceValueEl) mapDistanceValueEl.textContent = initialMapDistance;
+    }
+
+    const jobCards = Array.from(document.querySelectorAll('.job-card')).map(card => ({
+        id: card.dataset.jobId,
+        title: card.dataset.jobTitle,
+        location: card.dataset.jobLocation,
+        lat: card.dataset.jobLat,
+        lon: card.dataset.jobLon,
+        url: card.dataset.jobUrl,
+        cardEl: card,
+        marker: null,
+        coords: null,
+        hasPinnedLocation: !!(card.dataset.jobLat && card.dataset.jobLon)
+    }));
+
+    const geocodeCache = {};
+    let userLocation = null;
+    let userMarker = null;
+    let userRadius = null;
+
+    const map = L.map('jobs-map').setView([37.8, -96], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    const haversineMiles = (a, b) => {
+        const toRad = deg => deg * Math.PI / 180;
+        const R = 6371; // km
+        const dLat = toRad(b[0] - a[0]);
+        const dLon = toRad(b[1] - a[1]);
+        const lat1 = toRad(a[0]);
+        const lat2 = toRad(b[0]);
+        const sinDLat = Math.sin(dLat / 2);
+        const sinDLon = Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(
+            Math.sqrt(sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon),
+            Math.sqrt(1 - (sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon))
+        );
+        return (R * c) * 0.621371;
+    };
+
+    const updateStatus = text => {
+        if (locationStatusEl) {
+            locationStatusEl.textContent = text;
+        }
+    };
+
+    const updateSummary = (visibleCards, visibleMarkers, commuteMiles, mapMiles, commuteEnabled) => {
+        if (!distanceSummaryEl) return;
+        if (!userLocation) {
+            distanceSummaryEl.textContent = 'Showing all jobs. Turn on location to filter by distance.';
+            return;
+        }
+        if (!commuteEnabled) {
+            distanceSummaryEl.textContent = `All jobs shown • ${visibleMarkers} on map within ${mapMiles} mi`;
+        } else {
+            distanceSummaryEl.textContent = `${visibleCards} jobs within ${commuteMiles} mi commute • ${visibleMarkers} on map within ${mapMiles} mi`;
+        }
+    };
+
+    const filterByDistance = () => {
+        const commuteMiles = Number(commuteInput?.value || 25);
+        const mapMiles = Number(mapDistanceInput?.value || 100);
+        const commuteEnabled = commuteFilterToggle?.checked ?? true;
+        
+        if (commuteValueEl) {
+            commuteValueEl.textContent = commuteMiles;
+        }
+        if (mapDistanceValueEl) {
+            mapDistanceValueEl.textContent = mapMiles;
+        }
+
+        let visibleCards = 0;
+        let visibleMarkers = 0;
+        
+        jobCards.forEach(job => {
+            let distance = null;
+            
+            // Calculate distance if we have user location and job coordinates
+            if (userLocation && job.coords) {
+                distance = haversineMiles(userLocation, job.coords);
+            }
+
+            // Update distance badge on job card
+            const distanceBadge = job.cardEl.querySelector('.job-distance');
+            if (distanceBadge && distance !== null) {
+                const distanceText = distanceBadge.querySelector('.distance-text');
+                if (distanceText) {
+                    distanceText.textContent = `${distance.toFixed(1)} mi`;
+                }
+                distanceBadge.style.display = 'inline-block';
+            } else if (distanceBadge) {
+                distanceBadge.style.display = 'none';
+            }
+
+            // Filter job cards by commute radius (only if toggle is ON)
+            let inCommuteRange = true;
+            if (commuteEnabled) {
+                inCommuteRange = !userLocation || !job.coords || distance <= commuteMiles;
+            }
+            
+            if (inCommuteRange) {
+                job.cardEl.classList.remove('d-none');
+                visibleCards += 1;
+            } else {
+                job.cardEl.classList.add('d-none');
+            }
+
+            // Filter map markers by map distance
+            const inMapRange = !userLocation || !job.coords || distance <= mapMiles;
+            
+            if (inMapRange && job.marker) {
+                if (!map.hasLayer(job.marker)) {
+                    job.marker.addTo(map);
+                }
+                visibleMarkers += 1;
+            } else if (job.marker && map.hasLayer(job.marker)) {
+                map.removeLayer(job.marker);
+            }
+        });
+
+        if (jobCountEl) {
+            jobCountEl.textContent = visibleCards;
+        }
+        updateSummary(visibleCards, visibleMarkers, commuteMiles, mapMiles, commuteEnabled);
+    };
+
+    const geocode = async (location) => {
+        if (!location) return null;
+        if (geocodeCache[location]) return geocodeCache[location];
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
+            const data = await res.json();
+            if (Array.isArray(data) && data.length) {
+                const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                geocodeCache[location] = coords;
+                return coords;
+            }
+        } catch (err) {
+            console.error('Geocoding failed for', location, err);
+        }
+        geocodeCache[location] = null;
+        return null;
+    };
+
+    const addJobMarkers = async () => {
+        for (const job of jobCards) {
+            let coords = null;
+            
+            // Use pinned coordinates if available, otherwise geocode
+            if (job.hasPinnedLocation) {
+                coords = [parseFloat(job.lat), parseFloat(job.lon)];
+                job.coords = coords;
+            } else {
+                coords = await geocode(job.location);
+                if (!coords) continue;
+                job.coords = coords;
+            }
+            
+            // Create marker with special icon for pinned locations
+            const markerOptions = { title: job.title };
+            if (job.hasPinnedLocation) {
+                // Use a custom icon for pinned locations
+                markerOptions.icon = L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                });
+            }
+            
+            const locationInfo = job.hasPinnedLocation 
+                ? '<br><span class="badge bg-success"><i class="fas fa-map-pin"></i> Exact Office Location</span>'
+                : '';
+            
+            job.marker = L.marker(coords, markerOptions)
+                .bindPopup(`<strong>${job.title}</strong><br>${job.location}${locationInfo}<br><a href="${job.url}" class="mt-1 d-inline-block btn btn-sm btn-primary">Apply</a>`);
+            job.marker.addTo(map);
+        }
+        filterByDistance();
+    };
+
+    const setUserLocation = (coords) => {
+        userLocation = coords;
+        const commuteMiles = Number(commuteInput?.value || 25);
+        const commuteEnabled = commuteFilterToggle?.checked ?? true;
+        
+        if (userMarker) {
+            map.removeLayer(userMarker);
+        }
+        if (userRadius) {
+            map.removeLayer(userRadius);
+        }
+        
+        userMarker = L.marker(coords, { icon: L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+        })}).addTo(map).bindPopup('You are here');
+        
+        // Only add circle if commute filter is enabled
+        userRadius = L.circle(coords, { radius: commuteMiles * 1609.34, color: '#0d6efd', fillOpacity: 0.08 });
+        if (commuteEnabled) {
+            userRadius.addTo(map);
+        }
+        
+        map.setView(coords, 10);
+        filterByDistance();
+    };
+
+    const requestGeolocation = () => {
+        if (!navigator.geolocation) {
+            updateStatus('Geolocation is not available in your browser. Showing all jobs.');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const coords = [position.coords.latitude, position.coords.longitude];
+                updateStatus('Location detected. Filtering jobs near you.');
+                setUserLocation(coords);
+            },
+            () => updateStatus('Location was blocked. Showing all jobs without distance filtering.')
+        );
+    };
+
+    // Commute filter toggle event
+    commuteFilterToggle?.addEventListener('change', () => {
+        const isEnabled = commuteFilterToggle.checked;
+        if (commuteToggleLabel) {
+            commuteToggleLabel.textContent = isEnabled ? 'On' : 'Off';
+        }
+        try {
+            localStorage.setItem(commuteToggleStorageKey, String(isEnabled));
+        } catch (err) {
+            // Storage might be unavailable; ignore.
+        }
+        
+        // Update circle visibility
+        if (userRadius && userLocation) {
+            if (isEnabled) {
+                if (!map.hasLayer(userRadius)) {
+                    userRadius.addTo(map);
+                }
+            } else {
+                if (map.hasLayer(userRadius)) {
+                    map.removeLayer(userRadius);
+                }
+            }
+        }
+        
+        filterByDistance();
+    });
+
+    // Commute radius slider event
+    commuteInput?.addEventListener('input', () => {
+        const miles = Number(commuteInput.value);
+        if (userRadius && userLocation) {
+            userRadius.setRadius(miles * 1609.34);
+        }
+        try {
+            localStorage.setItem(commuteStorageKey, String(miles));
+        } catch (err) {
+            // Storage might be unavailable; ignore.
+        }
+        filterByDistance();
+        updateCommutePresetButtons(miles);
+    });
+
+    // Map distance slider event
+    mapDistanceInput?.addEventListener('input', () => {
+        const miles = Number(mapDistanceInput.value);
+        try {
+            localStorage.setItem(mapDistanceStorageKey, String(miles));
+        } catch (err) {
+            // Storage might be unavailable; ignore.
+        }
+        filterByDistance();
+        updateMapDistancePresetButtons(miles);
+    });
+
+    // Commute preset buttons
+    const commutePresetButtons = document.querySelectorAll('.preset-commute');
+    const updateCommutePresetButtons = (currentDistance) => {
+        commutePresetButtons.forEach(btn => {
+            const btnDistance = Number(btn.dataset.distance);
+            if (btnDistance === currentDistance) {
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-secondary');
+            }
+        });
+    };
+
+    commutePresetButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const distance = Number(btn.dataset.distance);
+            if (commuteInput) {
+                commuteInput.value = distance;
+                commuteInput.dispatchEvent(new Event('input'));
+            }
+        });
+    });
+
+    // Map distance preset buttons
+    const mapDistancePresetButtons = document.querySelectorAll('.preset-map-distance');
+    const updateMapDistancePresetButtons = (currentDistance) => {
+        mapDistancePresetButtons.forEach(btn => {
+            const btnDistance = Number(btn.dataset.distance);
+            if (btnDistance === currentDistance) {
+                btn.classList.remove('btn-outline-success');
+                btn.classList.add('btn-success');
+            } else {
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-success');
+            }
+        });
+    };
+
+    mapDistancePresetButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const distance = Number(btn.dataset.distance);
+            if (mapDistanceInput) {
+                mapDistanceInput.value = distance;
+                mapDistanceInput.dispatchEvent(new Event('input'));
+            }
+        });
+    });
+
+    // Initialize preset button states
+    if (commuteInput) {
+        updateCommutePresetButtons(Number(commuteInput.value));
+    }
+    if (mapDistanceInput) {
+        updateMapDistancePresetButtons(Number(mapDistanceInput.value));
+    }
+
+    // Save radius preference button (for authenticated job seekers)
+    const saveRadiusBtn = document.getElementById('save-radius-btn');
+    if (saveRadiusBtn) {
+        saveRadiusBtn.addEventListener('click', async () => {
+            const radius = Number(commuteInput?.value || 25);
+            const originalText = saveRadiusBtn.innerHTML;
+            
+            try {
+                saveRadiusBtn.disabled = true;
+                saveRadiusBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                
+                const formData = new FormData();
+                formData.append('radius', radius);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                
+                const response = await fetch('{% url "save_commute_radius" %}', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    saveRadiusBtn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+                    saveRadiusBtn.classList.remove('btn-success');
+                    saveRadiusBtn.classList.add('btn-success');
+                    setTimeout(() => {
+                        saveRadiusBtn.innerHTML = originalText;
+                        saveRadiusBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Failed to save preference');
+                }
+            } catch (error) {
+                console.error('Error saving radius:', error);
+                saveRadiusBtn.innerHTML = '<i class="fas fa-times"></i> Error';
+                saveRadiusBtn.classList.remove('btn-success');
+                saveRadiusBtn.classList.add('btn-danger');
+                setTimeout(() => {
+                    saveRadiusBtn.innerHTML = originalText;
+                    saveRadiusBtn.classList.remove('btn-danger');
+                    saveRadiusBtn.classList.add('btn-success');
+                    saveRadiusBtn.disabled = false;
+                }, 2000);
+            }
+        });
+    }
+
+    requestGeolocation();
+    addJobMarkers();
+});
+</script>
+{% endblock %}

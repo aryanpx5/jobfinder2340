@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Recommended Jobs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Recommended Jobs</h2>
+    <a href="{% url 'job_search' %}" class="btn btn-outline-secondary btn-sm">Browse All Jobs</a>
+    </div>
+
+{% if profile_skills %}
+<p class="text-muted">Based on your skills: {{ profile_skills|join:', ' }}</p>
+{% else %}
+<div class="alert alert-info">We couldn't find skills on your profile yet. Add some to improve recommendations.</div>
+{% endif %}
+
+{% for job in recommendations %}
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">{{ job.title }}</h5>
+        <h6 class="card-subtitle mb-2 text-muted">{{ job.recruiter.username }} • {{ job.location }}</h6>
+        <p class="card-text">{{ job.description|truncatewords:30 }}</p>
+        <div class="row">
+            <div class="col-md-6">
+                <small><strong>Required Skills:</strong> {{ job.required_skills }}</small>
+            </div>
+            <div class="col-md-6">
+                {% if job.salary_min and job.salary_max %}
+                <small><strong>Salary:</strong> ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}</small>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-2">
+            {% if job.is_remote %}<span class="badge bg-success">Remote</span>{% endif %}
+            {% if job.visa_sponsorship %}<span class="badge bg-info">Visa Sponsorship</span>{% endif %}
+        </div>
+        <small class="text-muted">Posted {{ job.created_at|timesince }} ago</small>
+        <div class="mt-2">
+            {% if user.is_authenticated and user.user_type == 'job_seeker' %}
+            <a class="btn btn-sm btn-primary" href="{% url 'apply_to_posting' job.pk %}">Apply</a>
+            {% else %}
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'job_search' %}">Sign in to apply</a>
+            {% endif %}
+        </div>
+    </div>
+    </div>
+{% empty %}
+<div class="alert alert-info">No recommendations yet. Try adding more skills to your profile.</div>
+{% endfor %}
+
+{% endblock %}
+
+

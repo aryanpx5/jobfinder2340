@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Results: {{ saved_search.name }}{% endblock %}
+
+{% block content %}
+<h2>Search Results: {{ saved_search.name }}</h2>
+
+<div class="d-flex gap-2 mb-3">
+    <a href="{% url 'saved_searches' %}" class="btn btn-secondary">Back to Saved Searches</a>
+    <a href="{% url 'save_search' %}?skills={{ saved_search.skills }}&location={{ saved_search.location }}&headline={{ saved_search.headline }}" 
+       class="btn btn-outline-primary">Save Similar Search</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5>Search Criteria:</h5>
+        <p class="mb-1">
+            {% if saved_search.skills %}<strong>Skills:</strong> {{ saved_search.skills }}{% endif %}
+            {% if saved_search.location %}<strong>Location:</strong> {{ saved_search.location }}{% endif %}
+            {% if saved_search.headline %}<strong>Headline:</strong> {{ saved_search.headline }}{% endif %}
+        </p>
+        <p class="text-muted small mb-0">
+            Last checked: {% if saved_search.last_checked_at %}{{ saved_search.last_checked_at }}{% else %}Never{% endif %}
+        </p>
+    </div>
+</div>
+
+{% if profiles %}
+    <h5>Found {{ profiles|length }} candidate{{ profiles|length|pluralize }}</h5>
+    <div class="row">
+        {% for profile in profiles %}
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ profile.user.username }}</h5>
+                        {% if profile.headline %}
+                            <p class="text-muted mb-2">{{ profile.headline }}</p>
+                        {% endif %}
+                        {% if profile.location %}
+                            <p class="mb-2"><i class="fas fa-map-marker-alt"></i> {{ profile.location }}</p>
+                        {% endif %}
+                        {% if profile.skills %}
+                            <p class="mb-2"><strong>Skills:</strong> {{ profile.skills }}</p>
+                        {% endif %}
+                        <div class="mt-auto pt-2">
+                            {% if profile.allow_contact %}
+                                <a href="{% url 'email_candidate' profile.user.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-envelope"></i> Email
+                                </a>
+                                <a href="{% url 'compose_message' %}?recipient={{ profile.user.id }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-comment"></i> Message
+                                </a>
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled>Contact disabled</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">No candidates found matching this search.</div>
+{% endif %}
+{% endblock %}
+

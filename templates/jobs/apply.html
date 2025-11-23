@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Apply: {{ posting.title }}</h2>
+<p><strong>Company / Recruiter:</strong> {{ posting.recruiter.username }}</p>
+<p>{{ posting.description }}</p>
+
+<hr />
+
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        {{ form.cover_letter.label_tag }}
+        {{ form.cover_letter }}
+    </div>
+    <button type="submit" class="btn btn-primary">Submit Application</button>
+    <a class="btn btn-secondary" href="{% url 'job_search' %}">Cancel</a>
+</form>
+
+{% endblock %}

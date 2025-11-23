@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Candidates{% endblock %}
+
+{% block content %}
+<h2>Search Candidates</h2>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" action="{% url 'candidate_search' %}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="skills" class="form-label">Skills</label>
+                    <input type="text" class="form-control" id="skills" name="skills" 
+                           value="{{ search_params.skills }}" 
+                           placeholder="e.g., Python, Django, React">
+                </div>
+                <div class="col-md-4">
+                    <label for="location" class="form-label">Location</label>
+                    <input type="text" class="form-control" id="location" name="location" 
+                           value="{{ search_params.location }}" 
+                           placeholder="e.g., Atlanta, GA">
+                </div>
+                <div class="col-md-4">
+                    <label for="headline" class="form-label">Headline Keyword</label>
+                    <input type="text" class="form-control" id="headline" name="headline" 
+                           value="{{ search_params.headline }}" 
+                           placeholder="e.g., Software Developer">
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">Search</button>
+                <a href="{% url 'candidate_search' %}" class="btn btn-secondary">Clear</a>
+                {% if profiles %}
+                    <a href="{% url 'save_search' %}?skills={{ search_params.skills }}&location={{ search_params.location }}&headline={{ search_params.headline }}" 
+                       class="btn btn-outline-primary">Save This Search</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if profiles %}
+    <h5>Found {{ profiles|length }} candidate{{ profiles|length|pluralize }}</h5>
+    <div class="row">
+        {% for profile in profiles %}
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ profile.user.username }}</h5>
+                        {% if profile.headline %}
+                            <p class="text-muted mb-2">{{ profile.headline }}</p>
+                        {% endif %}
+                        {% if profile.location %}
+                            <p class="mb-2"><i class="fas fa-map-marker-alt"></i> {{ profile.location }}</p>
+                        {% endif %}
+                        {% if profile.skills %}
+                            <p class="mb-2"><strong>Skills:</strong> {{ profile.skills }}</p>
+                        {% endif %}
+                        <div class="mt-auto pt-2">
+                            {% if profile.allow_contact %}
+                                <a href="{% url 'email_candidate' profile.user.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-envelope"></i> Email
+                                </a>
+                                <a href="{% url 'compose_message' %}?recipient={{ profile.user.id }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-comment"></i> Message
+                                </a>
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled>Contact disabled</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% elif request.GET %}
+    <div class="alert alert-info">No candidates found matching your criteria.</div>
+{% endif %}
+{% endblock %}
+

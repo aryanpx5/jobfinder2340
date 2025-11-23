@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+    #location-map {
+        height: 400px;
+        width: 100%;
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2><i class="fas fa-briefcase"></i> Create Job Posting</h2>
+    <p class="text-muted">Fill in the details below and pin your office location on the map</p>
+    
+    <form method="post" id="job-posting-form">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                        <div class="text-danger">{{ form.title.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <div class="text-danger">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.required_skills.id_for_label }}" class="form-label">{{ form.required_skills.label }}</label>
+                    {{ form.required_skills }}
+                    <small class="form-text text-muted">{{ form.required_skills.help_text }}</small>
+                    {% if form.required_skills.errors %}
+                        <div class="text-danger">{{ form.required_skills.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="{{ form.salary_min.id_for_label }}" class="form-label">Salary Min</label>
+                    {{ form.salary_min }}
+                    {% if form.salary_min.errors %}
+                        <div class="text-danger">{{ form.salary_min.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.salary_max.id_for_label }}" class="form-label">Salary Max</label>
+                    {{ form.salary_max }}
+                    {% if form.salary_max.errors %}
+                        <div class="text-danger">{{ form.salary_max.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form.is_remote }}
+                        <label class="form-check-label" for="{{ form.is_remote.id_for_label }}">
+                            {{ form.is_remote.label }}
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form.visa_sponsorship }}
+                        <label class="form-check-label" for="{{ form.visa_sponsorship.id_for_label }}">
+                            {{ form.visa_sponsorship.label }}
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <div class="text-danger">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Office Location Section -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt"></i> Office Location</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="{{ form.location.id_for_label }}" class="form-label">
+                        {{ form.location.label }} <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        {{ form.location }}
+                        <button type="button" class="btn btn-outline-secondary" id="geocode-btn">
+                            <i class="fas fa-search"></i> Find on Map
+                        </button>
+                    </div>
+                    <small class="form-text text-muted">Enter the office address and click "Find on Map" to pin the location</small>
+                    {% if form.location.errors %}
+                        <div class="text-danger">{{ form.location.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div id="location-map"></div>
+                <p class="text-muted small mb-0">
+                    <i class="fas fa-info-circle"></i> Click on the map to pin your office location, or use the "Find on Map" button to geocode the address above.
+                </p>
+                
+                <!-- Hidden fields for lat/long -->
+                <input type="hidden" id="latitude" name="latitude" value="{{ form.instance.latitude|default:'' }}">
+                <input type="hidden" id="longitude" name="longitude" value="{{ form.instance.longitude|default:'' }}">
+                
+                <div id="location-status" class="mt-2"></div>
+            </div>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" type="submit">
+                <i class="fas fa-save"></i> Create Posting
+            </button>
+            <a class="btn btn-secondary" href="{% url 'my_postings' %}">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const mapContainer = document.getElementById('location-map');
+    const locationInput = document.getElementById('{{ form.location.id_for_label }}');
+    const latInput = document.getElementById('latitude');
+    const lonInput = document.getElementById('longitude');
+    const geocodeBtn = document.getElementById('geocode-btn');
+    const statusDiv = document.getElementById('location-status');
+    
+    // Initialize map centered on US
+    const map = L.map('location-map').setView([39.8283, -98.5795], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    
+    let marker = null;
+    
+    // If editing and coordinates exist, show marker
+    const existingLat = parseFloat(latInput.value);
+    const existingLon = parseFloat(lonInput.value);
+    if (!isNaN(existingLat) && !isNaN(existingLon)) {
+        marker = L.marker([existingLat, existingLon]).addTo(map);
+        map.setView([existingLat, existingLon], 13);
+        showStatus('Office location pinned', 'success');
+    }
+    
+    // Click on map to pin location
+    map.on('click', (e) => {
+        const lat = e.latlng.lat;
+        const lon = e.latlng.lng;
+        
+        if (marker) {
+            map.removeLayer(marker);
+        }
+        
+        marker = L.marker([lat, lon]).addTo(map);
+        latInput.value = lat.toFixed(6);
+        lonInput.value = lon.toFixed(6);
+        
+        showStatus('Office location pinned at: ' + lat.toFixed(4) + ', ' + lon.toFixed(4), 'success');
+    });
+    
+    // Geocode button
+    geocodeBtn.addEventListener('click', async () => {
+        const address = locationInput.value.trim();
+        if (!address) {
+            showStatus('Please enter an address first', 'warning');
+            return;
+        }
+        
+        geocodeBtn.disabled = true;
+        geocodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
+        
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+            const data = await response.json();
+            
+            if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+                
+                if (marker) {
+                    map.removeLayer(marker);
+                }
+                
+                marker = L.marker([lat, lon]).addTo(map);
+                map.setView([lat, lon], 13);
+                
+                latInput.value = lat.toFixed(6);
+                lonInput.value = lon.toFixed(6);
+                
+                showStatus('Location found and pinned!', 'success');
+            } else {
+                showStatus('Address not found. Try a different address or click on the map.', 'warning');
+            }
+        } catch (error) {
+            showStatus('Error finding location. Please try again.', 'danger');
+            console.error('Geocoding error:', error);
+        } finally {
+            geocodeBtn.disabled = false;
+            geocodeBtn.innerHTML = '<i class="fas fa-search"></i> Find on Map';
+        }
+    });
+    
+    function showStatus(message, type) {
+        statusDiv.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+    }
+});
+</script>
+{% endblock %}
